@@ -1,0 +1,74 @@
+@startuml use-case-diagram
+title Діаграма варіантів використання: Система підтримки складання розкладу занять
+skinparam defaultFontName DejaVu Sans
+skinparam dpi 160
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F5F9FF
+  BorderColor #2F5597
+  ArrowColor #2F5597
+}
+skinparam actor {
+  BackgroundColor #FFF2CC
+  BorderColor #7F6000
+}
+left to right direction
+
+actor "Гість" as Guest
+actor "Викладач" as Teacher
+actor "Диспетчер\n(адміністратор)" as Dispatcher
+
+rectangle "Система складання розкладу" {
+  ' Гість
+  usecase "Переглянути розклад\nгрупи" as UC1
+  usecase "Знайти заняття" as UC2
+  usecase "Авторизуватися" as UC3
+  usecase "Знайти за\nвикладачем" as UC2a
+  usecase "Знайти за\nаудиторією" as UC2b
+  usecase "Експортувати розклад\nу PDF" as UC11
+
+  ' Викладач
+  usecase "Вказати побажання\nщодо часу" as UC4
+  usecase "Переглянути\nособистий розклад" as UC5
+  usecase "Запросити заміну\nзаняття" as UC6
+
+  ' Диспетчер
+  usecase "Скласти розклад\nзанять" as UC7
+  usecase "Керувати навчальним\nнавантаженням" as UC8
+  usecase "Опублікувати розклад" as UC9
+  usecase "Перевірити конфлікти\nрозкладу" as UC10
+  usecase "Підібрати аудиторію" as UC12
+  usecase "Врахувати побажання\nвикладача" as UC13
+}
+
+' Узагальнення акторів
+Teacher --|> Guest
+Dispatcher --|> Guest
+
+' Асоціації (по 3 варіанти використання на актора)
+Guest --> UC1
+Guest --> UC2
+Guest --> UC3
+
+Teacher --> UC4
+Teacher --> UC5
+Teacher --> UC6
+
+Dispatcher --> UC7
+Dispatcher --> UC8
+Dispatcher --> UC9
+
+' Узагальнення варіантів використання
+UC2a --|> UC2
+UC2b --|> UC2
+
+' Включення (include)
+UC7 ..> UC10 : <<include>>
+UC7 ..> UC12 : <<include>>
+UC9 ..> UC10 : <<include>>
+
+' Розширення (extend)
+UC11 ..> UC1 : <<extend>>
+UC13 ..> UC7 : <<extend>>
+@enduml

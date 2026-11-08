@@ -14,9 +14,6 @@ class Calculator
         return $x - $y;
     }
 
-    /**
-     * Множення двох чисел.
-     */
     public function multiply($x, $y)
     {
         return $x * $y;
