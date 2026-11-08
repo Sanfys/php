@@ -14,9 +14,6 @@ class Calculator
         return $x - $y;
     }
 
-    /**
-     * Множення двох чисел (додано у межах задачі Issue #N, етап 6 лабораторної роботи 1).
-     */
     public function multiply($x, $y)
     {
         return $x * $y;
