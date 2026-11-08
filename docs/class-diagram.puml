@@ -1,0 +1,220 @@
+@startuml class-diagram
+title Діаграма класів: Система підтримки складання розкладу занять (Laravel / MVC)
+skinparam defaultFontName DejaVu Sans
+skinparam dpi 220
+skinparam defaultFontSize 9
+skinparam classFontSize 10
+skinparam classAttributeFontSize 9
+skinparam roundCorner 4
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+skinparam nodesep 34
+skinparam ranksep 70
+skinparam class {
+  BackgroundColor #F5F9FF
+  BorderColor #2F5597
+  ArrowColor #2F5597
+  HeaderBackgroundColor #DCE6F5
+}
+skinparam stereotypeCBackgroundColor #DCE6F5
+
+abstract class User <<Model>> {
+  +id: int
+  +name: string
+  +email: string
+  -password: string
+  +created_at: DateTime
+  --
+  +register(data: array): User
+  +login(email: string, password: string): bool
+  +logout(): void
+  +updateProfile(data: array): bool
+  +changePassword(old: string, new: string): bool
+}
+
+class Teacher <<Model>> {
+  +academic_degree: string
+  +position: string
+  +phone: string
+  +max_hours_per_week: int
+  +is_active: bool
+  --
+  +getSchedule(week: int): Lesson[]
+  +setAvailability(slot: TimeSlot, available: bool): void
+  +getWorkload(): int
+  +requestChange(lesson: Lesson, reason: string): bool
+  +isAvailable(slot: TimeSlot): bool
+}
+
+class Dispatcher <<Model>> {
+  +role_level: int
+  +faculty: string
+  +permissions: array
+  +is_super: bool
+  +last_action_at: DateTime
+  --
+  +generateSchedule(semester: int): Schedule
+  +publishSchedule(schedule: Schedule): bool
+  +assignWorkload(teacher: Teacher, subject: Subject, hours: int): Workload
+  +resolveConflict(lesson: Lesson): bool
+  +importData(file: string): int
+}
+
+class StudentGroup <<Model>> {
+  +id: int
+  +name: string
+  +course: int
+  +specialty: string
+  +students_count: int
+  --
+  +getSchedule(week: int): Lesson[]
+  +getWeeklyHours(): int
+  +isFree(slot: TimeSlot): bool
+  +addSubject(subject: Subject): void
+  +updateSize(count: int): void
+}
+
+class Subject <<Model>> {
+  +id: int
+  +name: string
+  +code: string
+  +credits: int
+  +hours_per_semester: int
+  --
+  +getTeachers(): Teacher[]
+  +getTotalHours(): int
+  +requiresLab(): bool
+  +assignTeacher(teacher: Teacher): void
+  +getGroups(): StudentGroup[]
+}
+
+class Classroom <<Model>> {
+  +id: int
+  +number: string
+  +building: string
+  +capacity: int
+  +type: string
+  +is_available: bool
+  --
+  +isFree(slot: TimeSlot): bool
+  +fitsGroup(group: StudentGroup): bool
+  +reserve(slot: TimeSlot): bool
+  +release(slot: TimeSlot): void
+  +getOccupancy(week: int): float
+}
+
+class TimeSlot <<Model>> {
+  +id: int
+  +day_of_week: int
+  +lesson_number: int
+  +start_time: Time
+  +end_time: Time
+  --
+  +overlapsWith(other: TimeSlot): bool
+  +getDurationMinutes(): int
+  +isMorning(): bool
+  +getLabel(): string
+  +isSameDay(other: TimeSlot): bool
+}
+
+class Lesson <<Model>> {
+  +id: int
+  +subject_id: int
+  +teacher_id: int
+  +group_id: int
+  +classroom_id: int
+  +time_slot_id: int
+  +lesson_type: string
+  +is_confirmed: bool
+  --
+  +hasConflict(other: Lesson): bool
+  +reschedule(slot: TimeSlot, room: Classroom): bool
+  +cancel(): void
+  +getDurationMinutes(): int
+  +confirm(): void
+}
+
+class Schedule <<Model>> {
+  +id: int
+  +name: string
+  +semester: int
+  +academic_year: string
+  +status: string
+  +created_at: DateTime
+  --
+  +addLesson(lesson: Lesson): bool
+  +removeLesson(id: int): void
+  +findConflicts(): Lesson[]
+  +publish(): bool
+  +exportToPdf(): string
+}
+
+class Workload <<Model>> {
+  +id: int
+  +teacher_id: int
+  +subject_id: int
+  +group_id: int
+  +hours_per_week: int
+  --
+  +getTotalHours(weeks: int): int
+  +isExceedingLimit(): bool
+  +assign(teacher: Teacher): bool
+  +changeHours(hours: int): void
+  +remove(): void
+}
+
+class ScheduleController <<Controller>> {
+  -scheduleService: ScheduleService
+  -request: Request
+  -perPage: int
+  -viewName: string
+  -cacheTtl: int
+  --
+  +index(): View
+  +show(id: int): View
+  +generate(request: Request): Response
+  +publish(id: int): Response
+  +export(id: int): Response
+}
+
+class LessonController <<Controller>> {
+  -lessonService: LessonService
+  -conflictChecker: ConflictChecker
+  -request: Request
+  -viewName: string
+  -perPage: int
+  --
+  +index(): View
+  +store(request: Request): Response
+  +update(request: Request, id: int): Response
+  +destroy(id: int): Response
+  +move(request: Request, id: int): Response
+}
+
+' ===== Наслідування =====
+Teacher --|> User
+Dispatcher --|> User
+
+' ===== Композиція =====
+Schedule "1" *-- "0..*" Lesson : містить
+Teacher "1" *-- "0..*" Workload : має навантаження
+
+' ===== Агрегація =====
+Classroom "1" o-- "0..*" Lesson : приймає
+StudentGroup "1" o-- "0..*" Lesson : навчається на
+Subject "1" o-- "0..*" Workload : викладається за
+
+' ===== Асоціація =====
+Lesson "0..*" --> "1" Subject : з дисципліни
+Lesson "0..*" --> "1" Teacher : веде
+Lesson "0..*" --> "1" TimeSlot : у слоті
+Workload "0..*" --> "1" StudentGroup : для групи
+Dispatcher "1" --> "0..*" Schedule : формує
+
+' ===== Залежності =====
+ScheduleController ..> Schedule : керує
+LessonController ..> Lesson : керує
+LessonController ..> Classroom
+Dispatcher ..> Workload : призначає
+@enduml
